@@ -4,5 +4,7 @@
   "db_host": "localhost",
   "db_username": "postgres",
   "db_password": "root",
-  "db_port": 5332
+  "db_port": 5332,
+  "crypt_password": "Very_very_Secret_P@55w0rd",
+  "iv": "2840ee46"
 }
