@@ -13,9 +13,13 @@
     "nodemon": "^2.0.22"
   },
   "dependencies": {
+    "bcrypt": "^5.1.0",
     "config": "^3.3.9",
+    "cookie-parser": "^1.4.6",
     "crypto": "^1.0.1",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "node-device-detector": "^2.0.14",
     "otp-generator": "^4.0.1",
     "pg": "^8.11.1",
     "uuid": "^9.0.0"

@@ -6,5 +6,12 @@
   "db_password": "root",
   "db_port": 5332,
   "crypt_password": "Very_very_Secret_P@55w0rd",
-  "iv": "2840ee46"
+  "iv": "2840ee46",
+
+  "secret": "MyVeryVerySecretKey",
+  "access_key": "BuAccessuchunMaxfiyKalit",
+  "refresh_key": "BuRefreshuchunMaxfiyKalit",
+  "access_time": "30s",
+  "refresh_time": "30d",
+  "refresh_ms": 2592000000
 }

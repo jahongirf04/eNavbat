@@ -2,7 +2,19 @@ const { encode, decode } = require("../services/crypt");
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
 
+const myJwt = require("../services/jwt-service");
+
+const bcrypt = require("bcrypt");
+
 const otpGenerator = require("otp-generator");
+
+const deviceDetector = require("node-device-detector");
+
+const detector = new deviceDetector({
+  clientIndexes: true,
+  deviceIndexes: true,
+  deviceAliasCode: false,
+});
 
 function AddMinutesToDate(date, minutes) {
   return new Date(date.getTime() + minutes * 60000);
@@ -52,7 +64,7 @@ const dates = {
       : NaN;
   },
   compare: function (a, b) {
-    console.log(a,b);
+    console.log(a, b);
     return isFinite((a = this.convert(a).valueOf())) &&
       isFinite((b = this.convert(b).valueOf()))
       ? (a > b) - (a < b)
@@ -106,6 +118,8 @@ const verifyOTP = async (req, res) => {
     obj.otp_id,
   ]);
   const result = otpResult.rows[0];
+  const myId = result.id
+  console.log(result);
   if (result != null) {
     // Check if otp is already used or not
     if (result.verified != true) {
@@ -113,30 +127,63 @@ const verifyOTP = async (req, res) => {
       if (dates.compare(result.expiration_time, currentdate) == 1) {
         // Check if otp is equal to the OTP in the DB
         if (otp == result.otp) {
-            await pool.query(`Update otp set verified = $2 where id = $1`, [
-                result.id,
-                true
-            ])
-            const clientResult = await pool.query(
-                `Select * from client where client_phone_number = $1`,
-                [check]
-            )
-            if (clientResult.rows.length == 0){
-                const response = {
-                    Status: "Success",
-                    Details: "new",
-                    Check: check
-                }
-                return res.status(200).send(response)
-            } else{
-                const response = {
-                    Status: "Success",
-                    Details: "old",
-                    Check: check,
-                    ClientName: clientResult.rows[0].client_first_name
-                }
-                return res.status(200).send(response)
-            }
+          await pool.query(`Update otp set verified = $2 where id = $1`, [
+            myId,
+            true,
+          ]);
+          const clientResult = await pool.query(
+            `Select * from client where client_phone_number = $1`,
+            [check]
+          );
+          var details;
+          if (clientResult.rows.length == 0) {
+            const newClient = await pool.query(
+              `insert into client (id, client_phone_number, otp_id) values ($1, $2, $3) returning id`,
+              [7,check, obj.otp_id]
+            );
+            client_id = newClient.rows[0].id;
+            details = "old";
+          } else {
+            client_id = clientResult.rows[0].id;
+            details = "old";
+            await pool.query(`update client set otp_id = $2 where id = $1`, [
+              client_id,
+              obj.otp_id,
+            ]);
+          }
+
+          const payload = {
+            id: clientResult.id,
+          };
+          const tokens = myJwt.generateTokens(payload);
+          // const saltRounds = 10;
+          // const myPlaintextPassword = "s0//P4$$w0rD";
+
+          // const someOtherPlaintextPassword = "not_bacon";
+          // const hashed_token = bcrypt
+            // .hash(myPlaintextPassword, saltRounds)
+            // .then(function (hash) {
+            //   return hash;
+            // });
+          const response = {
+            Status: "Success",
+            Details: details,
+            Check: check,
+            refreshToken: tokens.refreshToken,
+          };
+          const userAgent = req.headers["user-agent"];
+          const result = detector.detect(userAgent);
+          await pool.query(
+            `insert into token (id, table_name, user_id, user_os,
+                  user_device, hashed_refresh_token, user_browser ) values ($1, $2, $3, $4, $5, $6, $7)`,
+            [1, "Client", clientResult.id, result, result, tokens.refreshToken, result]
+          );
+
+          res.cookie("refreshToken", tokens.refreshToken, {
+            maxAge: config.get("refresh_ms"),
+            httpOnly: true,
+          });
+          res.status(200).send(response)
         } else {
           const response = {
             Status: "Filure",
@@ -218,5 +265,5 @@ module.exports = {
   getOne,
   update,
   deleteOne,
-  verifyOTP
+  verifyOTP,
 };

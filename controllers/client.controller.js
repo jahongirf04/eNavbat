@@ -1,4 +1,12 @@
 const pool = require("../config/db")
+const deviceDetector = require("node-device-detector")
+const deviceHelper = require("node-device-detector/helper")
+
+const detector = new deviceDetector({
+  clientIndexes: true,
+  deviceIndexes: true,
+  deviceAliasCode: false,
+});
 
 const add = async (req, res) => {
   try {
@@ -35,7 +43,11 @@ const add = async (req, res) => {
 
 const get = async (req, res) => {
   try {
-
+    const userAgent = req.headers["user-agent"]
+    console.log(userAgent);
+    const result = detector.detect(userAgent)
+    console.log("result parse", result);
+    console.log(deviceHelper.isDesktop(result));
     const obje = await pool.query(
       `
         select * from client
